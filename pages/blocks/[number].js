@@ -1,12 +1,16 @@
 import { useRouter } from 'next/router'
-import { useState, useEffect } from "react"
-import {axiosMoralis} from "../../services/axios";
+import { useState, useEffect, useContext } from "react"
+import {axiosMoralis} from "../../services/axios"
+
+import { AppContext } from "../../contexts"
 
 export default function Block() {
   const [block, setBlock] = useState({})
 
   const router = useRouter()
   const { number } = router.query
+
+  const { search } = useContext(AppContext)
 
   useEffect(async () => {
     setBlock((await axiosMoralis.get(`/block/${number}`)).data)
@@ -59,25 +63,29 @@ export default function Block() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {block.transactions !== undefined && block.transactions.map(transaction => (
-              <tr key={`transaction_${transaction.hash}`}>
-                <td className="px-6 py-4 w-1/5 truncate text-sm font-medium text-gray-900">
-                  {transaction.hash}
-                </td>
-                <td className="px-6 py-4 w-1/5 truncate text-sm text-gray-500">
-                  {transaction.block_number}
-                </td>
-                <td className="px-6 py-4 w-1/5 truncate text-sm text-gray-500">
-                  {transaction.from_address}
-                </td>
-                <td className="px-6 py-4 w-1/5 truncate text-sm text-gray-500">
-                  {transaction.to_address}
-                </td>
-                <td className="px-6 py-4 w-1/5 truncate text-sm text-gray-500">
-                  {transaction.value}
-                </td>
-              </tr>
-            ))}
+            {block.transactions !== undefined && block.transactions.map(transaction => {
+              if (search === '' || (search !== '' && (transaction.from_address.toLowerCase() === search.toLowerCase() || transaction.to_address.toLowerCase() === search.toLowerCase()))) {
+                return (
+                  <tr key={`transaction_${transaction.hash}`}>
+                    <td className="px-6 py-4 w-1/5 truncate text-sm font-medium text-gray-900">
+                      {transaction.hash}
+                    </td>
+                    <td className="px-6 py-4 w-1/5 truncate text-sm text-gray-500">
+                      {transaction.block_number}
+                    </td>
+                    <td className="px-6 py-4 w-1/5 truncate text-sm text-gray-500">
+                      {transaction.from_address}
+                    </td>
+                    <td className="px-6 py-4 w-1/5 truncate text-sm text-gray-500">
+                      {transaction.to_address}
+                    </td>
+                    <td className="px-6 py-4 w-1/5 truncate text-sm text-gray-500">
+                      {transaction.value}
+                    </td>
+                  </tr>
+                )
+              }
+            })}
           </tbody>
         </table>
       </div>

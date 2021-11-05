@@ -18,7 +18,7 @@ export default function Home() {
   const { search } = useContext(AppContext)
 
   // fetch 10 blocks from moralis
-  const fetchBlocks = (blockNumber) => {
+  const fetchBlocks = (blockNumber, start = false) => {
     const _blocks = []
     const urls = []
 
@@ -36,36 +36,37 @@ export default function Home() {
 
     getBlocks(urls).then(res => {
       setIsLoading(false)
-      setBlocks([...blocks, ..._blocks.sort((a, b) => b.number - a.number)])
+      if (start) {
+        setBlocks([..._blocks.sort((a, b) => b.number - a.number)])
+      } else {
+        setBlocks([...blocks, ..._blocks.sort((a, b) => b.number - a.number)])
+      }
     })
   }
 
-  // fetch the initial 10 blocks when starting app
-  useEffect(async () => {
-    const blockNumber = (await axiosMoralis.get('/dateToBlock')).data.block
-    fetchBlocks(blockNumber)
-    setLatestBlockNumber(blockNumber)
-  }, [])
+  // fetch blocks by address
+  const fetchBlocksByAddress = async (address) => {
+    let data
+    const _blocks = []
+    const _transactions = await axiosMoralis.get(`/${search}`)
+    data = _transactions.data.result.reduce(function (a, b) {
+      (a[b['block_number']] = a[b['block_number']] || []).push(b)
+      return a
+    }, {})
+    Object.keys(data).forEach(number => {
+      _blocks.push({ number, transaction_count: data[number].length })
+    })
+    setBlocks([..._blocks])
+  }
 
   // fetch blocks & transactions by address
   useEffect(async () => {
-    let data
-    const _blocks = []
-    if (search !== '') {
-      const _transactions = await axiosMoralis.get(`/${search}`)
-      data = _transactions.data.result.reduce(function (a, b) {
-        (a[b['block_number']] = a[b['block_number']] || []).push(b)
-        return a
-      }, {})
-      Object.keys(data).forEach(number => {
-        _blocks.push({ number, transaction_count: data[number].length })
-      })
-      setBlocks([..._blocks])
-    } else {
-      setBlocks([])
+    if (search === '') {
       const blockNumber = (await axiosMoralis.get('/dateToBlock')).data.block
-      fetchBlocks(blockNumber)
+      fetchBlocks(blockNumber, true)
       setLatestBlockNumber(blockNumber)
+    } else {
+      await fetchBlocksByAddress(search)
     }
   }, [search])
 
